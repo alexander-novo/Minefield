@@ -11,5 +11,5 @@
 		"start": "node Server.js"
 	},
 	"main": "Server.js",
-	"private": "true"
+	"private": true
 }
