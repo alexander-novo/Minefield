@@ -1,0 +1,4 @@
+"scripts": {
+  "start": "supervisor Server.js"
+},
+"main": "Server.js"
