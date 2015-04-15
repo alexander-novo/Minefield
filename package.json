@@ -1,4 +1,14 @@
-"scripts": {
-  "start": "supervisor Server.js"
-},
-"main": "Server.js"
+{
+	"name": "minefield",
+	"version": "0.1",
+	"description": "A multiplayer minesweeper server",
+	"author": "Alexander Novotny <alexander_novo@mail.tmcc.edu>",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/alexander-novo/Minefield.git"
+	},
+	"scripts": {
+		"start": "node Server.js"
+	},
+	"main": "Server.js"
+}
