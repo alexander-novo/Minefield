@@ -2,8 +2,9 @@ var http = require("http");
 var fs = require("fs");
 var util = require("util");
 
+var log_dir = process.env.OPENSHIFT_LOG_DIR || __dirname + "/logs";
 checkLogFile();
-var outStream = fs.createWriteStream(__dirname + "/logs/out.log", {flags: 'a'});
+var outStream = fs.createWriteStream(log_dir + "/out.log", {flags: 'a'});
 
 console.log = function(d) { //Write all outputs to log file
   outStream.write(util.format(d) + '\n');
@@ -34,9 +35,17 @@ process.on('uncaughtException', function (err) {
 
 function checkLogFile() {
 	try {
-		fs.statSync(__dirname + "/logs/out.log");
+		if(!fs.statSync(log_dir).isDirectory()) {
+			fs.mkdir(log_dir);
+		}
 	} catch(err) {
-		fs.writeFileSync(__dirname + "/logs/out.log");
+		fs.mkdir(log_dir);
+	}
+
+	try {
+		fs.statSync(log_dir + "/out.log");
+	} catch(err) {
+		fs.writeFileSync(log_dir + "/out.log");
 	}
 }
 
