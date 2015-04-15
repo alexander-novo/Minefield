@@ -1,8 +1,6 @@
 var http = require("http");
 var fs = require("fs");
-var Etcd = require("node-etcd");
 
-var etcd = new Etcd("discovery.etcd.io");
 var server = http.createServer(function(request, response) {
 	console.log(request.method + ": " + request.url);
 	switch(request.method) {
@@ -18,8 +16,6 @@ server.listen(80);
 process.on('uncaughtException', function (err) {
   console.log('Caught exception: ' + err);
 });
-
-etcd.get("727337cfee478424c9ef9b6e7f602e81", console.log);
 
 function get(request, response) {
 	var url = __dirname + request.url;
