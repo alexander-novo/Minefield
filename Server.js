@@ -12,7 +12,13 @@ var server = http.createServer(function(request, response) {
 			break;
 	}
 });
-server.listen(80);
+
+var port = process.env.OPENSHIFT_NODEJS_PORT || 80;
+var ip = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
+
+server.listen(port, ip, function() {
+	console.log("Listening on " + ip + ":" + port);
+});
 process.on('uncaughtException', function (err) {
   console.log('Caught exception: ' + err);
 });
