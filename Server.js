@@ -47,7 +47,7 @@ function getSendableFileFrom(url) {
 	}
 
 	if(stats.isDirectory()) {
-		return getSendableFileFrom(url + "index.html");
+		return getSendableFileFrom(url + "Index.html");
 	} else {
 		return url;
 	}
