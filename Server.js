@@ -1,5 +1,14 @@
 var http = require("http");
 var fs = require("fs");
+var util = require("util");
+
+checkLogFile();
+var outStream = fs.createWriteStream(__dirname + "/logs/out.log", {flags: 'a'});
+
+console.log = function(d) { //Write all outputs to log file
+  outStream.write(util.format(d) + '\n');
+  process.stdout.write(util.format(d) + '\n');
+};
 
 var server = http.createServer(function(request, response) {
 	console.log(request.method + ": " + request.url);
@@ -23,6 +32,14 @@ process.on('uncaughtException', function (err) {
   console.log('Caught exception: ' + err);
 });
 
+function checkLogFile() {
+	try {
+		fs.statSync(__dirname + "/logs/out.log");
+	} catch(err) {
+		fs.writeFileSync(__dirname + "/logs/out.log");
+	}
+}
+
 function get(request, response) {
 	var url = __dirname + request.url;
 	var file = getSendableFileFrom(url);
@@ -42,7 +59,7 @@ function getSendableFileFrom(url) {
 	var stats;
 	try {
 		stats = fs.statSync(url);
-	} catch (err) {
+	} catch(err) {
 		return false;
 	}
 
