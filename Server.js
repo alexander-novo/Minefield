@@ -65,7 +65,9 @@ function get(request, response) {
 	}
 
 	var contentType = file.indexOf(".html", file.length - ".html".length) === -1 ? "text/plain" : "text/html";
-	response.writeHead(200, "OK");
+	response.writeHead(200, "OK", {
+		"content-type": contentType
+	});
 	fs.createReadStream(file).pipe(response);
 }
 
