@@ -29,6 +29,7 @@ var ip = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
 server.listen(port, ip, function() {
 	console.log("Listening on " + ip + ":" + port);
 });
+
 process.on('uncaughtException', function (err) {
   console.log('Caught exception: ' + err);
 });
@@ -52,6 +53,9 @@ function checkLogFile() {
 function get(request, response) {
 	var url = __dirname + request.url;
 	var file = getSendableFileFrom(url);
+
+	console.log(request.headers);
+	console.log("");
 	
 	if(!file) {
 		console.log("Could not find file/directory: " + url);
@@ -60,6 +64,7 @@ function get(request, response) {
 		return;
 	}
 
+	var contentType = file.indexOf(".html", file.length - ".html".length) === -1 ? "text/plain" : "text/html";
 	response.writeHead(200, "OK");
 	fs.createReadStream(file).pipe(response);
 }
