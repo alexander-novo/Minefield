@@ -7,9 +7,21 @@ checkLogFile();
 var outStream = fs.createWriteStream(log_dir + "/out.log", {flags: 'a'});
 
 console.log = function(d) { //Write all outputs to log file
+  var date = new Date();
+  outStream.write(getFormattedDate(date) + " > ")
   outStream.write(util.format(d) + '\n');
+  process.stdout.write(getFormattedDate(date) + " > ")
   process.stdout.write(util.format(d) + '\n');
 };
+
+function getFormattedDate(date) {
+	var hours = date.getHours() < 9 ? "0" + (date.getHours() + 1) : (date.getHours() + 1);
+	var minutes = date.getMinutes() < 9 ? "0" + (date.getMinutes() + 1) : (date.getMinutes() + 1);
+	var seconds = date.getSeconds() < 9 ? "0" + (date.getSeconds() + 1) : (date.getSeconds() + 1);
+	var month = date.getMonth() < 9 ? "0" + (date.getMonth() + 1) : (date.getMonth() + 1);
+	var day = date.getDate() < 9 ? "0" + (date.getDate() + 1) : (date.getDate() + 1);
+	return month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
+}
 
 var server = http.createServer(function(request, response) {
 	console.log(request.method + ": " + request.url);
