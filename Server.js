@@ -32,6 +32,7 @@ server.listen(port, ip, function() {
 
 process.on('uncaughtException', function (err) {
   console.log('Caught exception: ' + err);
+  console.log(err.stack);
 });
 
 function checkLogFile() {
@@ -87,10 +88,11 @@ function getSendableFileFrom(url) {
 }
 
 function post(request, response) {
-	response.writeHead(100);
+	var data = [];
 
 	request.on("data", function(chunk) {
 		console.log("POST data: " + chunk.toString());
+		data.push(JSON.parse(chunk.toString()))
 	});
 
 	request.on('end', function() {
@@ -98,6 +100,28 @@ function post(request, response) {
       response.writeHead(200, "OK", {
       	"content-type": "application/json"
       });
+      for(var json of data) {
+      	switch(json.json.messageType) {
+      		case "register":
+      			users.push(new User(users.length));
+      			response.write(JSON.stringify({
+      				json: {
+      					messageType: "register",
+      					data: {
+      						id: (users.length - 1)
+      					}
+      				}
+      			}));
+      			break;
+      	}
+      }
       response.end();
     });
+}
+
+var users = [];
+
+function User(id) {
+	this.id = id;
+	this.score = 0;
 }

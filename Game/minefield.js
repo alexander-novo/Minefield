@@ -33,27 +33,27 @@ function initMinefield(can, fscreen) {
 	canvas.canvas.addEventListener("click", onLeftClick);
 	canvas.canvas.addEventListener("contextmenu", onRightClick);
 
-	performTestRequest();
+	registerUser();
 
 	//TODO Preload images and/or sound
 	if(fullscreen) refreshCanvasSize();
 	onFrame();
 }
 
-function performTestRequest() {
+function registerUser() {
 	$.ajax({
 		type: "POST",
 		url: "/",
-		data: { json: JSON.stringify({
-			messageType: "Test",
-			data: {
-				data1: "blah",
-				data2: "blah2"
+		data: JSON.stringify({ 
+			json: {
+				messageType: "register"
 			}
-		})},
-		dataType: "json"
+		}),
+		contentType: "application/json; charset=utf-8"
 	}).done(function(data) {
-		console.log( "Sample of data:", data.slice( 0, 100 ) );
+		console.log("User id: " + data.json.data.id);
+	}).fail(function(err) {
+		console.log("Error receiving POST: " + err.toString())
 	});
 }
 
