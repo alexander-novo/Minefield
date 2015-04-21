@@ -8,5 +8,5 @@ server.on("close", function(code) {
 });
 
 process.on("exit", function(code) {
-	server.kill("SIGKILL");
+	server.kill();
 });
