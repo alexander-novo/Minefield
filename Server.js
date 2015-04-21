@@ -14,6 +14,8 @@ console.log = function(d) { //Write all outputs to log file
   process.stdout.write(util.format(d) + '\n');
 };
 
+console.log("test");
+
 function getFormattedDate(date) {
 	var hours = date.getHours() < 9 ? "0" + (date.getHours() + 1) : (date.getHours() + 1);
 	var minutes = date.getMinutes() < 9 ? "0" + (date.getMinutes() + 1) : (date.getMinutes() + 1);
