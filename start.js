@@ -5,4 +5,8 @@ var spawn = require('child_process').spawn,
 
 server.on("close", function(code) {
 	process.exit(code);
-})
+});
+
+process.on("exit", function(code) {
+	server.disconnect();
+});
