@@ -49,14 +49,6 @@ process.on('uncaughtException', function (err) {
   console.log(err.stack);
 });
 
-process.on("exit", onExit);
-process.on("SIGKILL", onExit);
-
-function onExit() {
-	console.log("Exiting...");
-	process.exit(0);
-}
-
 function checkLogFile() {
 	try {
 		if(!fs.statSync(log_dir).isDirectory()) {
