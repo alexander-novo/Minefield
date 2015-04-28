@@ -1,4 +1,5 @@
 var http = require("http");
+var io = require("socket.io");
 var fs = require("fs");
 var util = require("util");
 
@@ -7,14 +8,12 @@ checkLogFile();
 var outStream = fs.createWriteStream(log_dir + "/out.log", {flags: 'a'});
 
 console.log = function(d) { //Write all outputs to log file
-  var date = new Date();
-  outStream.write(getFormattedDate(date) + " > ")
-  outStream.write(util.format(d) + '\n');
-  process.stdout.write(getFormattedDate(date) + " > ")
-  process.stdout.write(util.format(d) + '\n');
+	var date = new Date();
+	outStream.write(getFormattedDate(date) + " > ")
+	outStream.write(util.format(d) + '\n');
+	process.stdout.write(getFormattedDate(date) + " > ")
+	process.stdout.write(util.format(d) + '\n');
 };
-
-console.log("test");
 
 function getFormattedDate(date) {
 	var hours = date.getHours() < 9 ? "0" + (date.getHours() + 1) : (date.getHours() + 1);
@@ -24,30 +23,6 @@ function getFormattedDate(date) {
 	var day = date.getDate() < 9 ? "0" + (date.getDate() + 1) : (date.getDate() + 1);
 	return month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
 }
-
-var server = http.createServer(function(request, response) {
-	console.log(request.method + ": " + request.url);
-	switch(request.method) {
-		case "GET":
-			get(request, response);
-			break;
-		case "POST":
-			post(request, response);
-			break;
-	}
-});
-
-var port = process.env.OPENSHIFT_NODEJS_PORT || 80;
-var ip = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
-
-server.listen(port, ip, function() {
-	console.log("Listening on " + ip + ":" + port);
-});
-
-process.on('uncaughtException', function (err) {
-  console.log('Caught exception: ' + err);
-  console.log(err.stack);
-});
 
 function checkLogFile() {
 	try {
@@ -65,13 +40,50 @@ function checkLogFile() {
 	}
 }
 
+
+
+var port = process.env.OPENSHIFT_NODEJS_PORT || 80;
+var ip = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
+
+var httpServer = http.createServer(function(request, response) {
+	switch(request.method) {
+		case "GET":
+			get(request, response);
+			break;
+		case "POST":
+			break;
+	}
+}).listen(port, ip, function() {
+	console.log("HTTP Listening on " + ip + ":" + port);
+});
+
+var sockServ = io(httpServer);
+sockServ.on("connection", function(sock) {
+	var newUser = new User();
+	users.push(newUser);
+	newUser.randomName(function() {
+		console.log(newUser.name + " has connected.");
+
+		sock.emit("register", {
+			id: newUser.id,
+			name: newUser.name
+		});
+
+		sock.emit("pushBoard", board);
+	});
+
+	sock.on("disconnect", function() {
+		console.log(newUser.name + " has disconnected.");
+		users.splice(users.indexOf(newUser), 1);
+	});
+
+	sock.on("pullBoard", sock.emit("pushBoard", board));
+});
+
 function get(request, response) {
 	var url = __dirname + request.url;
 	var file = getSendableFileFrom(url);
 
-	console.log(request.headers);
-	console.log("");
-	
 	if(!file) {
 		console.log("Could not find file/directory: " + url);
 		response.writeHead(404);
@@ -101,41 +113,42 @@ function getSendableFileFrom(url) {
 	}
 }
 
-function post(request, response) {
-	var data = [];
-
-	request.on("data", function(chunk) {
-		console.log("POST data: " + chunk.toString());
-		data.push(JSON.parse(chunk.toString()))
-	});
-
-	request.on('end', function() {
-      console.log("POST end");
-      response.writeHead(200, "OK", {
-      	"content-type": "application/json"
-      });
-      for(var json of data) {
-      	switch(json.json.messageType) {
-      		case "register":
-      			users.push(new User(users.length));
-      			response.write(JSON.stringify({
-      				json: {
-      					messageType: "register",
-      					data: {
-      						id: (users.length - 1)
-      					}
-      				}
-      			}));
-      			break;
-      	}
-      }
-      response.end();
-    });
-}
-
 var users = [];
 
-function User(id) {
+function User(id, name) {
+	if(id === undefined) id = users.length;
+	if(name === undefined) name = "user" + (id + 1);
+
 	this.id = id;
 	this.score = 0;
+	this.ttl = 20 * 60 * 1000; // 20 minutes session inactive time limit
+	this.name = name;
 }
+
+User.prototype.randomName = function(callback) {
+	var self = this;
+
+	var options = {
+		hostname: "api.randomuser.me",
+		path: "/"
+	}
+
+	var nameReq = http.request(options, function(res) {
+		res.setEncoding("utf8");
+		res.on("data", function(chunk) {
+			self.name = JSON.parse(chunk).results[0].user.username;
+			callback();
+		});
+	});
+
+	nameReq.on("err", function(err) {
+		console.log(err.message);
+	});
+
+	nameReq.end();
+}
+
+process.on('uncaughtException', function (err) {
+	console.log('Caught exception: ' + err);
+	console.log(err.stack);
+});

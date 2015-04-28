@@ -8,6 +8,9 @@ var offsetY = 0;
 var CELL_SIZE = 20;
 var DIFFICULTY = .2;
 
+var userid;
+var name;
+
 var mine_colors = {
 	1: "#00FF00",
 	2: "#00C000",
@@ -33,28 +36,48 @@ function initMinefield(can, fscreen) {
 	canvas.canvas.addEventListener("click", onLeftClick);
 	canvas.canvas.addEventListener("contextmenu", onRightClick);
 
-	registerUser();
+	handleSocket();
 
 	//TODO Preload images and/or sound
 	if(fullscreen) refreshCanvasSize();
 	onFrame();
 }
 
-function registerUser() {
+function handleSocket() {
+	var socket = io();
+
+	socket.on("register", function(usr) {
+		userid = usr.id;
+		name = usr.name;
+	});
+
+	sock.on("pushBoard", function(board) {
+		cells = board;
+	});
+}
+
+function finishRegister(data) {
+	console.log("User id: " + data.json.data.id);
+	console.log("User name: " + data.json.data.name);
+	userid = data.json.data.id;
+	name = data.json.data.name;
+
 	$.ajax({
 		type: "POST",
 		url: "/",
-		data: JSON.stringify({ 
+		data: JSON.stringify({
 			json: {
-				messageType: "register"
+				messageType: "pullBoard"
 			}
 		}),
 		contentType: "application/json; charset=utf-8"
-	}).done(function(data) {
-		console.log("User id: " + data.json.data.id);
-	}).fail(function(err) {
-		console.log("Error receiving POST: " + err.toString())
+	}).done(receiveBoard).fail(function(err) {
+		console.log("Error receiving board POST: " + err.toString());
 	});
+}
+
+function receiveBoard(data) {
+
 }
 
 function draw() {
