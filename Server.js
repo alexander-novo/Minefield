@@ -77,6 +77,7 @@ sockServ.on("connection", function(sock) {
 	sock.on("mineClick", function(data) {
 		if(cells[data.x] == null) cells[data.x] = [];
 		if(cells[data.x][data.y] == null) cells[data.x][data.y] = new Cell(data.x, data.y);
+		if(cells[data.x][data.y].revealed) return;
 
 		if(cells[data.x][data.y].mine) {
 			cells[data.x][data.y].revealed = true;
@@ -85,8 +86,10 @@ sockServ.on("connection", function(sock) {
 		} else {
 			cells[data.x][data.y].revealed = data.click;
 			cells[data.x][data.y].correct = data.click;
-			sockServ.emit("cellChange", cells[data.x][data.y].getSendable());
-			if(data.click) doMineSurroundCheck(cells[data.x][data.y]);
+			if(data.click) {
+				sockServ.emit("cellChange", cells[data.x][data.y].getSendable());
+				doMineSurroundCheck(cells[data.x][data.y]);
+			}
 		}
 	});
 
