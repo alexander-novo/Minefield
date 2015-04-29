@@ -6,10 +6,16 @@ var offsetX = 0;
 var offsetY = 0;
 
 var CELL_SIZE = 20;
-var DIFFICULTY = .2;
 
 var userid;
 var name;
+
+var mine = new Image();
+mine.src = "/Game/Minesweeper_Icon.png";
+var flag = new Image();
+flag.src = "/Game/Flag.png";
+
+var socket = io();
 
 var mine_colors = {
 	1: "#00FF00",
@@ -38,84 +44,57 @@ function initMinefield(can, fscreen) {
 
 	handleSocket();
 
-	//TODO Preload images and/or sound
 	if(fullscreen) refreshCanvasSize();
 	onFrame();
 }
 
 function handleSocket() {
-	var socket = io();
-
 	socket.on("register", function(usr) {
 		userid = usr.id;
 		name = usr.name;
 	});
 
-	sock.on("pushBoard", function(board) {
+	socket.on("pushBoard", function(board) {
 		cells = board;
+		console.log("Got board: ");
+		console.log(board);
 	});
-}
 
-function finishRegister(data) {
-	console.log("User id: " + data.json.data.id);
-	console.log("User name: " + data.json.data.name);
-	userid = data.json.data.id;
-	name = data.json.data.name;
-
-	$.ajax({
-		type: "POST",
-		url: "/",
-		data: JSON.stringify({
-			json: {
-				messageType: "pullBoard"
-			}
-		}),
-		contentType: "application/json; charset=utf-8"
-	}).done(receiveBoard).fail(function(err) {
-		console.log("Error receiving board POST: " + err.toString());
+	socket.on("cellChange", function(cell) {
+		if(cells[cell.x] == null) cells[cell.x] = [];
+		cells[cell.x][cell.y] = cell;
+		console.log("Got new cell: ");
+		console.log(cell);
 	});
-}
-
-function receiveBoard(data) {
-
 }
 
 function draw() {
-	for(var x = Math.floor(offsetX / CELL_SIZE); x < Math.ceil(canvas.canvas.width / CELL_SIZE) + Math.floor(offsetX / CELL_SIZE); x++) {
-		if(cells[x] == null) cells[x] = [];
-		for(var y = Math.floor(offsetY / CELL_SIZE); y < Math.ceil(canvas.canvas.height / CELL_SIZE) + Math.floor(offsetY / CELL_SIZE); y++) {
-			if(cells[x][y] == null) cells[x][y] = new Cell(x, y);
-			if(!(cells[x][y].status & STATUS_REVEALED)) canvas.fillStyle = "white";
-			else if(cells[x][y].status & STATUS_CORRECT) canvas.fillStyle = "green";
-			else if(cells[x][y].status & STATUS_MINE) canvas.fillStyle = "red";
-			else if(!minesAround(x, y)) canvas.fillStyle = "gray";
-			else {
+	for(var row of cells) {
+		if(row == null) continue;
+		for(var cell of row) {
+			if(cell == null) continue;
+			if(cell.value == -1) {
+				if(cell.correct) {
+					canvas.drawImage(flag, cell.x * CELL_SIZE - offsetX, cell.y * CELL_SIZE - offsetY, CELL_SIZE, CELL_SIZE);
+				} else {
+					canvas.fillStyle = "red";
+					canvas.fillRect(cell.x * CELL_SIZE - offsetX, cell.y * CELL_SIZE - offsetY, CELL_SIZE, CELL_SIZE);
+					canvas.drawImage(mine, cell.x * CELL_SIZE - offsetX, cell.y * CELL_SIZE - offsetY, CELL_SIZE, CELL_SIZE);
+				}
+			} else if (cell.value == 0) {
+				canvas.fillStyle = "gray";
+				canvas.fillRect(cell.x * CELL_SIZE - offsetX, cell.y * CELL_SIZE - offsetY, CELL_SIZE, CELL_SIZE);
+			} else {
 				canvas.fillStyle = "orange";
-				canvas.fillRect(x * CELL_SIZE - offsetX, y * CELL_SIZE - offsetY, CELL_SIZE, CELL_SIZE);
+				canvas.fillRect(cell.x * CELL_SIZE - offsetX, cell.y * CELL_SIZE - offsetY, CELL_SIZE, CELL_SIZE);
 
-				var mines = minesAround(x, y);
 				canvas.font = (CELL_SIZE * .9) + 'px Courier New';
-				canvas.fillStyle = mine_colors[mines];
-				canvas.fillText(mines, x * CELL_SIZE + (CELL_SIZE - canvas.measureText(mines).width) / 2, y * CELL_SIZE + CELL_SIZE * .68)
-				continue;
-			}
-			canvas.fillRect(x * CELL_SIZE - offsetX, y * CELL_SIZE - offsetY, CELL_SIZE, CELL_SIZE);
-		}
-	}
-}
+				canvas.fillStyle = mine_colors[cell.value];
+				canvas.fillText(cell.value, cell.x * CELL_SIZE + (CELL_SIZE - canvas.measureText(cell.value).width) / 2, cell.y * CELL_SIZE + CELL_SIZE * .68)
 
-function minesAround(x, y) {
-	var mines = 0;
-	for(var i = -1; i <= 1; i++) {
-		for(var j = -1; j <= 1; j++) {
-			if(cells[x + i] == null) cells[x + i] = [];
-			if(cells[x + i][y + j] == null) cells[x + i][y + j] = new Cell(x + i, y + j);
-			if(cells[x + i][y + j].status & STATUS_MINE) {
-				mines++;
 			}
 		}
 	}
-	return mines;
 }
 
 function onFrame() {
@@ -132,24 +111,11 @@ function onMineClick(leftClick, x , y) {
 	if(x == null) var x = Math.floor((mousePos.x - $("#" + canvas.canvas.id).offset().left) / CELL_SIZE);
 	if(y == null) var y = Math.floor((mousePos.y - $("#" + canvas.canvas.id).offset().top) / CELL_SIZE);
 
-	if(cells[x] == null || cells[x][y] == null) return;
-	if(cells[x][y].status & STATUS_REVEALED) return;
-	cells[x][y].status += STATUS_REVEALED;
-	
-	if(cells[x][y].status & STATUS_MINE) {
-		if(!leftClick) cells[x][y].status += STATUS_CORRECT;
-	} else if(leftClick) {
-		if(!minesAround(x, y)) {
-			for(var i = -1; i <= 1; i++) {
-				for(var j = -1; j <= 1; j++) {
-					onMineClick(true, x + i, y + j);
-				}
-			}
-		}
-	} else {
-		//SCORE--
-		cells[x][y].status -= STATUS_REVEALED;
-	}
+	socket.emit("mineClick", {
+		click: leftClick,
+		x: x,
+		y: y,
+	});
 }
 
 function onMouseMove(e) {
@@ -168,32 +134,4 @@ function onRightClick(e) {
 function refreshCanvasSize() {
 	canvas.canvas.width = window.innerWidth;
 	canvas.canvas.height = window.innerHeight;
-}
-
-
-
-
-/*****************\
-*CLASS DEFINITIONS*
-\*****************/
-
-
-
-
-
-//Status identifiers
-var STATUS_MINE = 1;
-var STATUS_REVEALED = 2;
-var STATUS_CORRECT = 4;
-function Cell(x, y, mine, revealed, correct) {
-	if(x == null || y == null) throw "X and Y must be non-null";
-	if(mine == null) mine = Math.random() < DIFFICULTY;
-	if(revealed == null) revealed = false;
-
-	this.x = x;
-	this.y = y;
-	this.status = 0;
-	if(mine) this.status += 1;
-	if(revealed) this.status += 2;
-	if(correct) this.status += 4;
 }

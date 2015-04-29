@@ -40,6 +40,8 @@ function checkLogFile() {
 	}
 }
 
+var DIFFICULTY = .2;
+
 
 
 var port = process.env.OPENSHIFT_NODEJS_PORT || 80;
@@ -48,10 +50,10 @@ var ip = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
 var httpServer = http.createServer(function(request, response) {
 	switch(request.method) {
 		case "GET":
-			get(request, response);
-			break;
+		get(request, response);
+		break;
 		case "POST":
-			break;
+		break;
 	}
 }).listen(port, ip, function() {
 	console.log("HTTP Listening on " + ip + ":" + port);
@@ -59,7 +61,7 @@ var httpServer = http.createServer(function(request, response) {
 
 var sockServ = io(httpServer);
 sockServ.on("connection", function(sock) {
-	var newUser = new User();
+	var newUser = new User(sock);
 	users.push(newUser);
 	newUser.randomName(function() {
 		console.log(newUser.name + " has connected.");
@@ -69,7 +71,23 @@ sockServ.on("connection", function(sock) {
 			name: newUser.name
 		});
 
-		sock.emit("pushBoard", board);
+		sock.emit("pushBoard", getSendableBoard(newUser));
+	});
+
+	sock.on("mineClick", function(data) {
+		if(cells[data.x] == null) cells[data.x] = [];
+		if(cells[data.x][data.y] == null) cells[data.x][data.y] = new Cell(data.x, data.y);
+
+		if(cells[data.x][data.y].mine) {
+			cells[data.x][data.y].revealed = true;
+			cells[data.x][data.y].correct = !data.click;
+			sockServ.emit("cellChange", cells[data.x][data.y].getSendable());
+		} else {
+			cells[data.x][data.y].revealed = data.click;
+			cells[data.x][data.y].correct = data.click;
+			sockServ.emit("cellChange", cells[data.x][data.y].getSendable());
+			if(data.click) doMineSurroundCheck(cells[data.x][data.y]);
+		}
 	});
 
 	sock.on("disconnect", function() {
@@ -77,8 +95,37 @@ sockServ.on("connection", function(sock) {
 		users.splice(users.indexOf(newUser), 1);
 	});
 
-	sock.on("pullBoard", sock.emit("pushBoard", board));
+	sock.on("pullBoard", function(){sock.emit("pushBoard", getSendableBoard(newUser));});
 });
+
+var cells = [];
+
+function getSendableBoard(newUser) {
+	var re = [];
+	for(var row in cells) {
+		if(re[row] == null) re[row] = [];
+		for(var cell in cells[row]) {
+			var _cell = cells[row][cell];
+			if(_cell.revealed) {
+				re[row][cell] = _cell.getSendable();
+			}
+		}
+	}
+	return re;
+}
+
+function doMineSurroundCheck(cell) {
+	if(!cell.mine) cell.revealed = true;
+	sockServ.emit("cellChange", cell.getSendable());
+	if(cell.minesAround() == 0) {
+		for(var x = -1; x <= 1; x++) {
+			for(var y = -1; y <= 1; y++) {
+				if(cells[cell.x + x][cell.y + y].revealed) continue;
+				doMineSurroundCheck(cells[cell.x + x][cell.y + y]);
+			}
+		}
+	}
+}
 
 function get(request, response) {
 	var url = __dirname + request.url;
@@ -113,16 +160,51 @@ function getSendableFileFrom(url) {
 	}
 }
 
+function Cell(x, y, mine, revealed, correct) {
+	if(x == null || y == null) throw "X and Y must be non-null";
+	if(mine == null) mine = Math.random() < DIFFICULTY;
+	if(revealed == null) revealed = false;
+
+	this.x = x;
+	this.y = y;
+	this.mine = mine;
+	this.revealed = revealed;
+	this.correct = correct;
+}
+
+Cell.prototype.getSendable = function() {
+	return {
+		value: this.minesAround(),
+		correct: this.correct,
+		x: this.x,
+		y: this.y
+	};
+}
+
+Cell.prototype.minesAround = function() {
+	if(this.mine) return -1;
+
+	var x = this.x;
+	var y = this.y;
+
+	var mines = 0;
+	for(var i = -1; i <= 1; i++) {
+		for(var j = -1; j <= 1; j++) {
+			if(cells[x + i] == null) cells[x + i] = [];
+			if(cells[x + i][y + j] == null) cells[x + i][y + j] = new Cell(x + i, y + j);
+			if(cells[x + i][y + j].mine) mines++;
+		}
+	}
+	return mines;
+}
+
 var users = [];
 
-function User(id, name) {
-	if(id === undefined) id = users.length;
-	if(name === undefined) name = "user" + (id + 1);
-
-	this.id = id;
+function User(socket, id, name) {
+	this.socket = socket;
+	this.id = id === undefined ? users.length : id;
+	this.name = name === undefined ? "user" + (id + 1) : id;
 	this.score = 0;
-	this.ttl = 20 * 60 * 1000; // 20 minutes session inactive time limit
-	this.name = name;
 }
 
 User.prototype.randomName = function(callback) {
