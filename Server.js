@@ -130,6 +130,17 @@ function doMineSurroundCheck(cell) {
 	}
 }
 
+function updatePlaces() {
+	var places = users.slice(0);
+	places.sort(function(a, b) {
+		return a.score - b.score;
+	});
+	for(var i = 0; i < places.length; i++) {
+		places[i].place = i + 1;
+		places[i].sendPlace();
+	}
+}
+
 function get(request, response) {
 	var url = __dirname + request.url;
 	var file = getSendableFileFrom(url);
@@ -204,10 +215,11 @@ Cell.prototype.minesAround = function() {
 var users = [];
 
 function User(socket, id, name) {
-	this.socket = socket;
+	this.sock = socket;
 	this.id = id === undefined ? users.length : id;
 	this.name = name === undefined ? "user" + (id + 1) : id;
 	this.score = 0;
+	updatePlaces();
 }
 
 User.prototype.randomName = function(callback) {
@@ -231,6 +243,16 @@ User.prototype.randomName = function(callback) {
 	});
 
 	nameReq.end();
+}
+
+User.prototype.changeScore = function(score) {
+	this.score += score;
+	this.sock.emit("scoreChange", this.score);
+	updatePlaces();
+}
+
+User.prototype.sendPlace = function() {
+	this.sock.emit("placeChange", this.place);
 }
 
 process.on('uncaughtException', function (err) {

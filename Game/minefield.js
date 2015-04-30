@@ -9,6 +9,7 @@ var CELL_SIZE = 20;
 
 var userid;
 var name;
+var score;
 
 var mine = new Image();
 mine.src = "/Game/Minesweeper_Icon.png";
@@ -65,6 +66,11 @@ function handleSocket() {
 		cells[cell.x][cell.y] = cell;
 		console.log("Got new cell: ");
 		console.log(cell);
+	});
+
+	socket.on("scoreChange", function(newScore) {
+		score = newScore;
+		console.log("Score is now " + score);
 	});
 }
 
