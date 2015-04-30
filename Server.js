@@ -140,6 +140,11 @@ function updatePlaces() {
 		places[i].place = i + 1;
 		places[i].sendPlace();
 	}
+	if(places[0] != firstPlace) {
+		firstPlace = places[0];
+		sockServ.emit("firstPlace", firstPlace.name);
+		console.log(firstPlace.name + " is now in the lead!");
+	}
 }
 
 function get(request, response) {
@@ -214,6 +219,7 @@ Cell.prototype.minesAround = function() {
 }
 
 var users = [];
+var firstPlace;
 
 function User(socket, id, name) {
 	this.sock = socket;
@@ -256,7 +262,6 @@ User.prototype.changeScore = function(score) {
 
 User.prototype.sendPlace = function() {
 	this.sock.emit("placeChange", this.place);
-	console.log("Sending " + this.name + " place: " + this.place);
 }
 
 process.on('uncaughtException', function (err) {

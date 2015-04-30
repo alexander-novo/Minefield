@@ -76,7 +76,11 @@ function handleSocket() {
 	socket.on("placeChange", function(newPlace) {
 		place = newPlace;
 		console.log("You are now in " + place + " place");
-	})
+	});
+
+	socket.on("firstPlace", function(firstPlace) {
+		console.log(firstPlace + " is now in the lead!");
+	});
 }
 
 function draw() {
