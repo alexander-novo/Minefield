@@ -72,6 +72,11 @@ function handleSocket() {
 		score = newScore;
 		console.log("Score is now " + score);
 	});
+
+	socket.on("placeChange", function(newPlace) {
+		place = newPlace;
+		console.log("You are now in " + place + " place");
+	})
 }
 
 function draw() {

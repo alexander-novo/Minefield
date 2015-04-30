@@ -62,7 +62,6 @@ var httpServer = http.createServer(function(request, response) {
 var sockServ = io(httpServer);
 sockServ.on("connection", function(sock) {
 	var newUser = new User(sock);
-	users.push(newUser);
 	newUser.randomName(function() {
 		console.log(newUser.name + " has connected.");
 
@@ -83,9 +82,11 @@ sockServ.on("connection", function(sock) {
 			cells[data.x][data.y].revealed = true;
 			cells[data.x][data.y].correct = !data.click;
 			sockServ.emit("cellChange", cells[data.x][data.y].getSendable());
+			newUser.changeScore(data.click ? -50 : 10);
 		} else {
 			cells[data.x][data.y].revealed = data.click;
 			cells[data.x][data.y].correct = data.click;
+			newUser.changeScore(data.click ? 5 : -25);
 			if(data.click) {
 				sockServ.emit("cellChange", cells[data.x][data.y].getSendable());
 				doMineSurroundCheck(cells[data.x][data.y]);
@@ -133,7 +134,7 @@ function doMineSurroundCheck(cell) {
 function updatePlaces() {
 	var places = users.slice(0);
 	places.sort(function(a, b) {
-		return a.score - b.score;
+		return b.score - a.score;
 	});
 	for(var i = 0; i < places.length; i++) {
 		places[i].place = i + 1;
@@ -217,8 +218,10 @@ var users = [];
 function User(socket, id, name) {
 	this.sock = socket;
 	this.id = id === undefined ? users.length : id;
-	this.name = name === undefined ? "user" + (id + 1) : id;
+	this.name = name === undefined ? "user" + (this.id + 1) : id;
 	this.score = 0;
+
+	users.push(this);
 	updatePlaces();
 }
 
@@ -253,6 +256,7 @@ User.prototype.changeScore = function(score) {
 
 User.prototype.sendPlace = function() {
 	this.sock.emit("placeChange", this.place);
+	console.log("Sending " + this.name + " place: " + this.place);
 }
 
 process.on('uncaughtException', function (err) {
