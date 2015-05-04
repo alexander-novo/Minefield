@@ -59,6 +59,8 @@ var httpServer = http.createServer(function(request, response) {
 	console.log("HTTP Listening on " + ip + ":" + port);
 });
 
+var mineDone = false;
+
 var sockServ = io(httpServer);
 sockServ.on("connection", function(sock) {
 	var newUser = new User(sock);
@@ -77,6 +79,16 @@ sockServ.on("connection", function(sock) {
 		if(cells[data.x] == null) cells[data.x] = [];
 		if(cells[data.x][data.y] == null) cells[data.x][data.y] = new Cell(data.x, data.y);
 		if(cells[data.x][data.y].revealed) return;
+
+		if(!mineDone) {
+			for(var x = -1; x <= 1; x++) {
+				for(var y = -1; y <= 1; y++) {
+					if(cells[data.x + x] == null) cells[data.x + x] = [];
+					cells[data.x + x][data.y + y] = new Cell(data.x + x, data.y + y, false);
+				}
+			}
+			mineDone = true;
+		}
 
 		if(cells[data.x][data.y].mine) {
 			cells[data.x][data.y].revealed = true;
@@ -147,6 +159,12 @@ function updatePlaces() {
 	}
 }
 
+var contentTypes = {
+	".html": "text/html",
+	".css": "text/css",
+	".js": "application/javascript"
+};
+
 function get(request, response) {
 	var url = __dirname + request.url;
 	var file = getSendableFileFrom(url);
@@ -158,7 +176,14 @@ function get(request, response) {
 		return;
 	}
 
-	var contentType = file.indexOf(".html", file.length - ".html".length) === -1 ? "text/plain" : "text/html";
+	var contentType = "text/plain";
+	for(var type in contentTypes) {
+		if(file.indexOf(type, file.length - type.length) !== -1) {
+			contentType = contentTypes[type];
+			break;
+		}
+	}
+
 	response.writeHead(200, "OK", {
 		"content-type": contentType
 	});

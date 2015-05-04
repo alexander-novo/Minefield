@@ -42,6 +42,7 @@ function initMinefield(can, fscreen) {
 	document.onmousemove = onMouseMove;
 	canvas.canvas.addEventListener("click", onLeftClick);
 	canvas.canvas.addEventListener("contextmenu", onRightClick);
+	window.addEventListener("keydown", onKeyDownHandler, true);
 
 	handleSocket();
 
@@ -57,15 +58,11 @@ function handleSocket() {
 
 	socket.on("pushBoard", function(board) {
 		cells = board;
-		console.log("Got board: ");
-		console.log(board);
 	});
 
 	socket.on("cellChange", function(cell) {
 		if(cells[cell.x] == null) cells[cell.x] = [];
 		cells[cell.x][cell.y] = cell;
-		console.log("Got new cell: ");
-		console.log(cell);
 	});
 
 	socket.on("scoreChange", function(newScore) {
@@ -83,31 +80,50 @@ function handleSocket() {
 	});
 }
 
+var BORDER_THICKNESS = 1;
+
 function draw() {
-	for(var row of cells) {
-		if(row == null) continue;
-		for(var cell of row) {
-			if(cell == null) continue;
-			if(cell.value == -1) {
-				if(cell.correct) {
-					canvas.drawImage(flag, cell.x * CELL_SIZE - offsetX, cell.y * CELL_SIZE - offsetY, CELL_SIZE, CELL_SIZE);
-				} else {
-					canvas.fillStyle = "red";
-					canvas.fillRect(cell.x * CELL_SIZE - offsetX, cell.y * CELL_SIZE - offsetY, CELL_SIZE, CELL_SIZE);
-					canvas.drawImage(mine, cell.x * CELL_SIZE - offsetX, cell.y * CELL_SIZE - offsetY, CELL_SIZE, CELL_SIZE);
+	canvas.fillStyle = "pink";
+	canvas.fillRect(0, -10, CELL_SIZE, CELL_SIZE);
+
+	for(var x = -CELL_SIZE + offsetX % CELL_SIZE; x < canvas.canvas.width; x += CELL_SIZE) {
+		for(var y = -CELL_SIZE + offsetY % CELL_SIZE; y < canvas.canvas.height; y += CELL_SIZE) {
+			var cellX = Math.floor((x + offsetX) / CELL_SIZE);
+			var cellY = Math.floor((y + offsetY) / CELL_SIZE);
+
+
+			if(!(cells[cellX] == null || cells[cellX][cellY] == null)) {
+				var cell = cells[cellX][cellY];
+
+				switch(cell.value) {
+					case -1:
+						if(cell.correct) canvas.drawImage(flag, x, y, CELL_SIZE, CELL_SIZE);
+						else {
+							canvas.fillStyle = "red";
+							canvas.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+							canvas.drawImage(mine, x, y, CELL_SIZE, CELL_SIZE);
+						}
+						break;
+					case 0:
+						canvas.fillStyle = "gray";
+						canvas.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+						break;
+					default:
+						canvas.fillStyle = "orange";
+						canvas.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+
+						canvas.font = (CELL_SIZE * .9) + 'px Courier New';
+						canvas.fillStyle = mine_colors[cell.value];
+						canvas.fillText(cell.value, x + (CELL_SIZE - canvas.measureText(cell.value).width) / 2, y + CELL_SIZE * .68);
+						break;
 				}
-			} else if (cell.value == 0) {
-				canvas.fillStyle = "gray";
-				canvas.fillRect(cell.x * CELL_SIZE - offsetX, cell.y * CELL_SIZE - offsetY, CELL_SIZE, CELL_SIZE);
-			} else {
-				canvas.fillStyle = "orange";
-				canvas.fillRect(cell.x * CELL_SIZE - offsetX, cell.y * CELL_SIZE - offsetY, CELL_SIZE, CELL_SIZE);
-
-				canvas.font = (CELL_SIZE * .9) + 'px Courier New';
-				canvas.fillStyle = mine_colors[cell.value];
-				canvas.fillText(cell.value, cell.x * CELL_SIZE + (CELL_SIZE - canvas.measureText(cell.value).width) / 2, cell.y * CELL_SIZE + CELL_SIZE * .68)
-
 			}
+			
+			canvas.fillStyle = "black";
+			canvas.fillRect(x, y, CELL_SIZE, BORDER_THICKNESS);
+			canvas.fillRect(x, y, BORDER_THICKNESS, CELL_SIZE);
+			canvas.fillRect(x + CELL_SIZE, y, BORDER_THICKNESS, CELL_SIZE);
+			canvas.fillRect(x, y + CELL_SIZE, CELL_SIZE, BORDER_THICKNESS);
 		}
 	}
 }
@@ -123,8 +139,8 @@ function onLeftClick(e) {
 }
 
 function onMineClick(leftClick, x , y) {
-	if(x == null) var x = Math.floor((mousePos.x - $("#" + canvas.canvas.id).offset().left) / CELL_SIZE);
-	if(y == null) var y = Math.floor((mousePos.y - $("#" + canvas.canvas.id).offset().top) / CELL_SIZE);
+	if(x == null) var x = Math.floor((mousePos.x - $("#" + canvas.canvas.id).offset().left + offsetX) / CELL_SIZE);
+	if(y == null) var y = Math.floor((mousePos.y - $("#" + canvas.canvas.id).offset().top + offsetY) / CELL_SIZE);
 
 	socket.emit("mineClick", {
 		click: leftClick,
@@ -144,6 +160,25 @@ function onRightClick(e) {
 	e.preventDefault();
 	onMineClick(false);
 	return false;
+}
+
+
+var offsetChange = 10;
+function onKeyDownHandler(e) {
+	switch(String.fromCharCode(e.keyCode || e.charCode)) {
+		case "W":
+			offsetY -= offsetChange;
+			break;
+		case "A":
+			offsetX -= offsetChange;
+			break;
+		case "S":
+			offsetY += offsetChange;
+			break;
+		case "D":
+			offsetX += offsetChange;
+			break;
+	}
 }
 
 function refreshCanvasSize() {
