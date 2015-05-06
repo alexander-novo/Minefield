@@ -72,6 +72,8 @@ sockServ.on("connection", function(sock) {
 			name: newUser.name
 		});
 
+		sock.emit("scoreChange", newUser.score);
+
 		sock.emit("pushBoard", getSendableBoard(newUser));
 	});
 
