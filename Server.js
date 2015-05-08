@@ -74,7 +74,7 @@ sockServ.on("connection", function(sock) {
 
 		sock.emit("scoreChange", newUser.score);
 
-		sock.emit("pushBoard", getSendableBoard(newUser));
+		pushBoard(sock)
 	});
 
 	sock.on("mineClick", function(data) {
@@ -113,23 +113,19 @@ sockServ.on("connection", function(sock) {
 		users.splice(users.indexOf(newUser), 1);
 	});
 
-	sock.on("pullBoard", function(){sock.emit("pushBoard", getSendableBoard(newUser));});
+	sock.on("pullBoard", function(){pushBoard(sock)});
 });
 
 var cells = [];
 
-function getSendableBoard(newUser) {
-	var re = [];
+function pushBoard(sock) {
 	for(var row in cells) {
-		if(re[row] == null) re[row] = [];
 		for(var cell in cells[row]) {
-			var _cell = cells[row][cell];
-			if(_cell.revealed) {
-				re[row][cell] = _cell.getSendable();
+			if(cells[row][cell].revealed) {
+				sock.emit("cellChange", cells[row][cell].getSendable());
 			}
 		}
 	}
-	return re;
 }
 
 function doMineSurroundCheck(cell) {

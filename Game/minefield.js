@@ -55,10 +55,7 @@ function handleSocket() {
 	socket.on("register", function(usr) {
 		userid = usr.id;
 		name = usr.name;
-	});
-
-	socket.on("pushBoard", function(board) {
-		cells = board;
+		cells = [];
 	});
 
 	socket.on("cellChange", function(cell) {
