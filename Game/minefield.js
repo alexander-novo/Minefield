@@ -72,7 +72,6 @@ function handleSocket() {
 
 	socket.on("placeChange", function(newPlace) {
 		place = newPlace;
-		console.log("You are now in " + place + " place");
 	});
 
 	socket.on("firstPlace", function(firstPlace) {
@@ -151,6 +150,20 @@ function draw() {
 		canvas.fillStyle = "black";
 		canvas.fillText("Place: " + place + getPlaceSuffix(place), canvas.canvas.width - SCORE_WIDTH + 2 + canvas.measureText("Score: ").width + 50, SCORE_HEIGHT - 2);
 	}
+
+	canvas.fillStyle = "#0000FF";
+	canvas.font = '26px Trebuchet MS';
+
+	var aboutStart = canvas.canvas.width - canvas.measureText("About").width - 4;
+
+	canvas.fillText("About", aboutStart, 30);
+
+	canvas.beginPath();
+	canvas.strokeStyle = "#0000FF";
+	canvas.lineWidth = 1;
+	canvas.moveTo(aboutStart, 32);
+	canvas.lineTo(aboutStart + canvas.measureText("About").width, 32);
+	canvas.stroke();
 }
 
 function onFrame() {
@@ -164,8 +177,17 @@ function onLeftClick(e) {
 }
 
 function onMineClick(leftClick, x , y) {
-	if(x == null) var x = Math.floor((mousePos.x - $("#" + canvas.canvas.id).offset().left + offsetX) / CELL_SIZE);
-	if(y == null) var y = Math.floor((mousePos.y - $("#" + canvas.canvas.id).offset().top + offsetY) / CELL_SIZE);
+	if(x == null || y == null) {
+		if(mousePos.x > canvas.canvas.width - SCORE_WIDTH && mousePos.y < SCORE_HEIGHT) {
+			if(mousePos.x > canvas.canvas.width - canvas.measureText("about").width - 4) {
+				window.open("https://vwebtech.tmcc.edu/courses/cit-128-1001/alexander_novo/Final/", "_blank");
+			}
+			return;
+		}
+		x = Math.floor((mousePos.x - $("#" + canvas.canvas.id).offset().left + offsetX) / CELL_SIZE);
+		y = Math.floor((mousePos.y - $("#" + canvas.canvas.id).offset().top + offsetY) / CELL_SIZE);
+	}
+
 
 	socket.emit("mineClick", {
 		click: leftClick,
@@ -179,6 +201,11 @@ function onMouseMove(e) {
 		x: e.pageX,
 		y: e.pageY
 	};
+	if(mousePos.x - $("#" + canvas.canvas.id).offset().left > canvas.canvas.width - SCORE_WIDTH && mousePos.y - $("#" + canvas.canvas.id).offset().top < SCORE_HEIGHT) {
+		canvas.canvas.style.cursor = "pointer";
+	} else {
+		canvas.canvas.style.cursor = "auto";
+	}
 }
 
 function onRightClick(e) {
