@@ -80,7 +80,7 @@ sockServ.on("connection", function(sock) {
 	sock.on("mineClick", function(data) {
 		if(cells[data.x] == null) cells[data.x] = [];
 		if(cells[data.x][data.y] == null) cells[data.x][data.y] = new Cell(data.x, data.y);
-		if(cells[data.x][data.y].revealed) sock.emite("cellChange", cells[data.x][data.y].getSendable());
+		if(cells[data.x][data.y].revealed) sock.emit("cellChange", cells[data.x][data.y].getSendable());
 
 		if(!mineDone) {
 			for(var x = -1; x <= 1; x++) {
